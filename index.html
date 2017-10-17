@@ -1,0 +1,152 @@
+<html>
+<head>
+
+<!--script src="http://localhost:9000/build/aframe-master.js"></script-->
+<script src="https://rawgit.com/aframevr/aframe/master/dist/aframe-master.js"></script>
+<script src="otherstuff.js"></script>
+  
+<script src="spectator.js"></script>
+
+</head>
+<body>
+
+<!-- This left-hand-side div holds the spectator view. -->
+<div id="spectator" style="position:absolute; left:0; height:100%; top:0; width:50%; border: 0px solid blue; overflow:hidden">
+</div>
+
+<!-- This right-hand-side div holds the typical view including A-Frame scene (note: embedded). -->
+<div id="hmd" style="position:absolute; right:0; bottom:0; top:0; left:50%; border: 8px solid black; overflow:hidden">
+  
+<a-scene antialias="true" embedded>
+  <!-- This is the declaration of the spectator camera. -->
+  <a-entity id="secondaryCamera"><a-camera spectator></a-camera></a-entity>  
+
+  <!-- The rest of the scene continues as usual. -->
+  
+  <a-assets>
+    <a-mixin id="tick" geometry="primitive: box; width: 0.01; height: 0.01; depth: 0.001" material="color: red" text="anchor:left; color:red; width:1; height:1"></a-mixin>
+  </a-assets>
+  <a-sky color="#3CF"></a-sky>
+  
+  <a-obj-model id="rocket" rotation="-90 0 0" position="0 0 -5" scale="0.01 0.01 0.01" src="https://crossorigin.me/http://chenz.org/objs/rocket.obj" mtl="https://crossorigin.me/http://chenz.org/objs/rocket.mtl"></a-obj-model>
+  
+  <!-- hand-controls shows gestures being made -->
+  <a-entity id='left-hand' which-controller-present hand-controls="left"></a-entity>
+  <!-- Various controller components show native model -->
+  <a-entity id='left-controller' oculus-touch-controls="hand:left" vive-controls="hand:left"
+    controller-cursor raycaster='far: 20; interval: 250; objects: .clickable'>
+    <!-- Controller raycasters need visual indication -->
+    <a-box position="0 0 -10" depth="20" width="0.01" height="0.001" color="green"></a-box>
+  </a-entity>
+  
+  <!-- hand-controls shows gestures being made -->
+  <a-entity id='right-hand' which-controller-present hand-controls="right" gearvr-controls daydream-controls="model:false"></a-entity>
+  <!-- Various controller components show native model -->
+  <a-entity id='right-controller' oculus-touch-controls="hand:right" vive-controls="hand:right" gearvr-controls daydream-controls
+    controller-cursor raycaster='far: 20; interval: 250; objects: .clickable'>
+    <!-- Controller raycasters need visual indication -->
+    <a-box position="0 0 -10" depth="20" width="0.01" height="0.001" color="green"></a-box>
+  </a-entity>
+  
+  <a-text align="center" position="0 0 -2" value="Hi there."></a-text>
+
+  <a-box mixin="tick" position="0 1.6 -1" text="value:-- 1.6 high"></a-box>
+  <a-box mixin="tick" position="0 1 -1" text="value:-- 1 high"></a-box>
+  <a-box mixin="tick" position="0 0 -1" text="value:-- 0 high"></a-box>
+  <a-box mixin="tick" position="0 -1 -1" text="value:-- -1 high"></a-box>
+  <a-box mixin="tick" position="0 -1.6 -1" text="value:-- -1.6 high"></a-box>
+  
+  <a-camera>
+    <a-entity scale="0.2 0.2 0.2">
+        <a-sphere scale="0.5 0.5 0.5"></a-sphere>
+        <a-cone position="0 0 -0.5" scale="0.25 1 0.25" rotation="-90 0 0"></a-cone>
+    </a-entity>
+    <a-entity id="camera-cursor"
+      cursor="fuse:true; fuseTimeout:2000"
+      raycaster="far:20; interval:250; objects:.clickable"
+      geometry="primitive:ring"
+      scale="0.05 0.05 0.05"
+      material="color:blue; shader:flat"
+      position="0 0 -3">
+        <a-animation begin="mouseleave" easing="ease-in" attribute="scale" dur="100"
+               fill="forwards" from="0.01 0.01 0.01" to="0.05 0.05 0.05"></a-animation>
+        <a-animation begin="click" easing="ease-in" attribute="scale" dur="100"
+               fill="forwards" from="0.05 0.05 0.05" to="0.01 0.01 0.01"></a-animation>
+        <a-animation begin="cursor-fusing" easing="ease-in" attribute="scale" dur="2000"
+               fill="forwards" from="0.05 0.05 0.05" to="0.01 0.01 0.01"></a-animation>
+    </a-entity>
+  </a-camera>
+</a-scene>
+  
+</div>
+
+<script>
+  var defaultCameraUserHeight; 
+  function addRenderStartListener () {
+    document.querySelector('a-scene').addEventListener('renderstart', function (evt) {
+      var cameraEl = evt.detail.target.camera.el;
+      var camera = cameraEl.components.camera;
+      defaultCameraUserHeight = camera.data.userHeight;
+      document.querySelector('a-text').setAttribute('position', 'y', defaultCameraUserHeight);
+      setInterval(function () { document.querySelector('a-text').setAttribute('value', 'Default camera userHeight: ' + defaultCameraUserHeight + '\nCamera position: ' + JSON.stringify(cameraEl.getAttribute('position'))); }, 100);
+    });
+  }
+  addRenderStartListener(); //document.body.addEventListener('DOMContentLoaded', addRenderStartListener);
+  
+  // For each entity that wants to know which controller is present,
+  // add an event listener.
+  document.querySelectorAll('a-entity[which-controller-present]').forEach((el) => {
+    el.addEventListener('controllerpresent', function () {
+      // Since we have a controller, remove gaze cursor.
+      var cameraCursorEl = document.querySelector('a-camera a-entity[cursor]');
+      if (cameraCursorEl) {
+        cameraCursorEl.parentElement.removeChild(cameraCursorEl);
+      }
+    });
+  });
+  
+  var scene = document.querySelector('a-scene');
+  for (var i=1; i<10; i++) {
+    var plane = document.createElement('a-plane');
+    plane.setAttribute('color', '#484');
+    plane.setAttribute('opacity', 0.05);
+    plane.setAttribute('rotation', '-90 0 0');
+    plane.setAttribute('position', (i*0.5) + ' ' + (0.01 + (i * 0.001)) + ' ' + -(i*0.5));
+    plane.setAttribute('width', i);
+    plane.setAttribute('height', i);
+    scene.appendChild(plane);
+    plane = plane.cloneNode(true);
+    plane.setAttribute('color', '#884');
+    plane.setAttribute('opacity', 0.05);
+    plane.setAttribute('rotation', '-90 0 0');
+    plane.setAttribute('position', -(i*0.5) + ' ' + (0.01 + (i * 0.001)) + ' ' + -(i*0.5));
+    scene.appendChild(plane);
+    plane = plane.cloneNode(true);
+    plane.setAttribute('color', '#844');
+    plane.setAttribute('opacity', 0.05);
+    plane.setAttribute('rotation', '-90 0 0');
+    plane.setAttribute('position', -(i*0.5) + ' ' + (0.01 + (i * 0.001)) + ' ' + (i*0.5));
+    scene.appendChild(plane);
+    plane = plane.cloneNode(true);
+    plane.setAttribute('color', '#444');
+    plane.setAttribute('opacity', 0.05);
+    plane.setAttribute('rotation', '-90 0 0');
+    plane.setAttribute('position', (i*0.5) + ' ' + (0.01 + (i * 0.001)) + ' ' + (i*0.5));
+    scene.appendChild(plane);
+  }
+
+  for (var x=-5; x<=5; x++) {
+   for (var y=-5; y<=5; y++) {
+    var el = document.createElement('a-box');
+    el.setAttribute('color', '#484');
+    el.setAttribute('position', (x*4) + ' ' + (y*4) + ' ' + -(10));
+    scene.appendChild(el);
+    el.setAttribute('clickbait', '');
+   }
+  }
+
+</script>
+
+
+</body>
+</html>
